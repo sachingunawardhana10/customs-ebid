@@ -7,6 +7,11 @@ import lk.customsebid.userauth.repository.RoleRepository;
 import lk.customsebid.userauth.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -54,4 +59,24 @@ public class UserService {
 
         return userRepository.save(user);
     }
+@Transactional
+public User assignRole(UUID userId, String roleName) {
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "User not found"
+            ));
+
+    Role role = roleRepository.findByName(roleName)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid role"
+            ));
+
+    user.getRoles().add(role);
+
+    return userRepository.save(user);
+}
+
 }
