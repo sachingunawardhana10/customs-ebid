@@ -7,8 +7,10 @@ import lk.customsebid.userauth.entity.User;
 import lk.customsebid.userauth.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -24,12 +26,41 @@ public class UserManagementController {
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> assignRole(
-            @PathVariable java.util.UUID id,
+            @PathVariable UUID id,
             @Valid @RequestBody RoleAssignmentRequest request
     ) {
         User user = userService.assignRole(id, request.getRole());
 
+        return ResponseEntity.ok(toUserResponse(user));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> getUserProfile(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        User requestedUser = userService.findUserById(id);
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_ADMIN")
+                );
+
+        boolean isOwnProfile = requestedUser.getEmail()
+                .equals(authentication.getName());
+
+        if (!isAdmin && !isOwnProfile) {
+            return ResponseEntity.status(403).build();
+        }
+
+        return ResponseEntity.ok(toUserResponse(requestedUser));
+    }
+
+    private UserResponse toUserResponse(User user) {
         UserResponse response = new UserResponse();
+
         response.setId(user.getId());
         response.setFirstName(user.getFirstName());
         response.setLastName(user.getLastName());
@@ -43,6 +74,6 @@ public class UserManagementController {
                         .collect(Collectors.toSet())
         );
 
-        return ResponseEntity.ok(response);
+        return response;
     }
 }
