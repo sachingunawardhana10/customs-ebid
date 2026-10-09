@@ -79,4 +79,15 @@ public User assignRole(UUID userId, String roleName) {
     return userRepository.save(user);
 }
 
+    @Transactional(readOnly = true)
+    public User findUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
+    }
+
 }
